@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Revision Room</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Web App Manifest link for PWA capabilities -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#4f46e5">
+    <!-- Firebase App (Core) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<!-- Firebase Realtime Database -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+</head>
+<body>
+
+    <!-- USER AUTH / PROFILE MODAL -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal-card">
+            <h2>Welcome to Revision Room</h2>
+            <p>Setup your profile to begin studying and competing.</p>
+            <div class="avatar-preview-container">
+                <img id="avatar-preview" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='%236366f1'><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 4c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm0 14c-2.03 0-3.8-1.04-4.84-2.61.03-1.6 3.23-2.48 4.84-2.48 1.6 0 4.81.88 4.84 2.48C15.8 18.96 14.03 20 12 20z'/></svg>" alt="Profile Preview">
+                <label for="avatar-input" class="btn-secondary">Choose Photo</label>
+                <input type="file" id="avatar-input" accept="image/*" style="display: none;">
+            </div>
+            <input type="text" id="username-input" placeholder="Enter your full name" maxlength="25">
+            <button id="save-profile-btn" class="btn-primary">Start Learning</button>
+        </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="app" class="app-container hidden">
+
+        <!-- TOP NAVIGATION BAR -->
+        <header class="top-bar">
+            <div class="user-badge">
+                <img id="nav-avatar" src="" alt="User Avatar">
+                <div class="user-info">
+                    <span id="nav-username">Student</span>
+                    <span id="online-status-indicator" class="status-online">● Online</span>
+                </div>
+            </div>
+            <div class="stats-badge">
+                <div class="stat-item">⏱️ <span id="study-timer">00:00</span></div>
+                <div class="stat-item">🏆 <span id="user-points">0</span> PTS</div>
+            </div>
+        </header>
+
+        <!-- MAIN VIEW SWITCHER / NAVIGATION -->
+        <nav class="bottom-nav">
+            <button class="nav-btn active" data-target="notes-view">📚 Notes</button>
+            <button class="nav-btn" data-target="quiz-view">🧠 Quiz</button>
+            <button class="nav-btn" data-target="chat-view">💬 Chat</button>
+            <button class="nav-btn" data-target="leaderboard-view">📊 Leaderboard</button>
+        </nav>
+        <!-- VIEW 1: STUDY NOTES & SCHEMES -->
+<main id="notes-view" class="view-panel active">
+    <h2>Study Notes</h2>
+    <div class="notes-header">
+        <div class="term-selector" style="display: flex; gap: 8px; margin-bottom: 15px;">
+            <button class="term-btn active" data-term="term1">1st Term</button>
+            <button class="term-btn" data-term="term2">2nd Term</button>
+            <button class="term-btn" data-term="term3">3rd Term</button>
+        </div>
+        <div class="subject-tabs">
+            <button class="tab-btn active" data-subject="english">English</button>
+            <button class="tab-btn" data-subject="physics">Physics</button>
+            <button class="tab-btn" data-subject="chemistry">Chemistry</button>
+            <button class="tab-btn" data-subject="maths">Maths</button>
+            <button class="tab-btn" data-subject="biology">Biology</button>
+        </div>
+    </div>
+            <div id="notes-content" class="content-box">
+                <!-- Dynamically populated from notesData.js -->
+            </div>
+        </main>
+
+        <!-- VIEW 2: QUIZ MODES (SOLO & 1v1) -->
+        <main id="quiz-view" class="view-panel">
+            <div id="quiz-selection">
+                <h2>Select Practice Mode</h2>
+                <div class="quiz-card" id="start-solo-btn">
+                    <h3>🎯 Solo Challenge</h3>
+                    <p>20 random questions across all subjects. Continuous retakes with no repeat questions.</p>
+                </div>
+                <div class="quiz-card" id="start-1v1-btn">
+                    <h3>⚔️ 1v1 Match</h3>
+                    <p>30 fast-paced competitive questions with forfeit option and live points tracking.</p>
+                </div>
+            </div>
+
+            <!-- ACTIVE QUIZ BOARD -->
+            <div id="quiz-container" class="hidden">
+                <div class="quiz-header">
+                    <span id="quiz-mode-title">Solo Mode</span>
+                    <span id="quiz-progress">Question 1/20</span>
+                    <button id="forfeit-btn" class="btn-danger hidden">Forfeit Match</button>
+                </div>
+                <div class="question-card">
+                    <p id="quiz-question-text">Question text will load here...</p>
+                    <div id="quiz-options" class="options-list">
+                        <!-- Options injected dynamically -->
+                    </div>
+                </div>
+                <div id="quiz-feedback" class="feedback-card hidden">
+                    <p id="feedback-message"></p>
+                    <p id="explanation-text" class="explanation"></p>
+                    <button id="next-question-btn" class="btn-primary">Next Question</button>
+                </div>
+                <button id="retake-quiz-btn" class="btn-primary hidden">Retake Quiz (New Questions)</button>
+            </div>
+        </main>
+
+        <!-- VIEW 3: REAL-TIME STUDY CHAT & ONLINE PRESENCE -->
+        <main id="chat-view" class="view-panel">
+            <div class="chat-layout">
+                <div class="online-users-bar">
+                    <h4>Online Students</h4>
+                    <div id="online-users-list" class="users-horizontal-scroll">
+                        <!-- Populated real-time via Firebase -->
+                    </div>
+                </div>
+                <div id="chat-messages" class="chat-box">
+                    <!-- Realtime messages loaded from Firebase RTDB -->
+                </div>
+                <form id="chat-form" class="chat-input-area">
+                    <input type="text" id="chat-message-input" placeholder="Ask a study question or discuss..." required autocomplete="off">
+                    <button type="submit" class="btn-primary">Send</button>
+                </form>
+            </div>
+        </main>
+
+        <!-- VIEW 4: LIVE LEADERBOARD -->
+        <main id="leaderboard-view" class="view-panel">
+            <h2>🏆 Real-time Leaderboard</h2>
+            <div class="leaderboard-card">
+                <ul id="leaderboard-list" class="leaderboard-ranks">
+                    <!-- Populated real-time via Firebase RTDB -->
+                </ul>
+            </div>
+        </main>
+
+    </div>
+    
+<!-- Floating Chat Button -->
+<button id="chat-toggle-btn" onclick="toggleChat()">
+  💬 <span id="online-count-badge">0</span>
+</button>
+
+<!-- Slide-Out Study Chat Drawer -->
+<div id="chat-drawer" class="chat-drawer">
+  <div class="chat-header">
+    <div class="chat-header-title">
+      <h3>📚 Study Room Chat</h3>
+      <small id="user-display-name"></small>
+    </div>
+    <button class="close-btn" onclick="toggleChat()">&times;</button>
+  </div>
+
+  <!-- Active Online Students Bar -->
+  <div class="online-section">
+    <div class="online-title">🟢 Online Classmates:</div>
+    <div id="online-students-list" class="online-list">
+      <span class="loading-text">Checking online status...</span>
+    </div>
+  </div>
+
+  <!-- Message Stream Container -->
+  <div id="chat-messages" class="chat-messages">
+    <!-- Messages will render here dynamically -->
+  </div>
+
+  <!-- Message Input Form -->
+<form id="chat-form" onsubmit="handleSend(event)" class="chat-input-container">
+  <input 
+    type="text" 
+    id="chat-input" 
+    placeholder="Type a message to classmates..." 
+    autocomplete="off" 
+    required 
+  />
+  <button type="submit" id="send-chat-btn">Send 🚀</button>
+</form>
+</div>
+
+    <!-- Script references -->
+    <script src="notesData.js"></script>
+    <script src="quizData.js"></script>
+    <script src="app.js"></script>
+</script>
+</body>
+</html>
